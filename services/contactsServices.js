@@ -53,10 +53,19 @@ async function updateContact(contactId, data) {
   return await contact.update(data, { returning: true });
 }
 
+async function updateStatusContact(contactId, data) {
+  const contact = await getContactById(contactId);
+  if (!contact) {
+    return null;
+  }
+  return await contact.update({ favorite: data.favorite }, { returning: true });
+}
+
 export {
   listContacts,
   getContactById,
   removeContact,
   addContact,
   updateContact,
+  updateStatusContact,
 };
