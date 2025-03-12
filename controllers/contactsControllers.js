@@ -62,7 +62,6 @@ export const updateContact = async (req, res, next) => {
 export const updateFavoriteContact = async (req, res, next) => {
   try {
     const { id } = req.params;
-    console.log(req.body);
     const result = await contactsService.updateStatusContact(id, req.body);
     if (!result) {
       throw HttpError(404, 'Not found');
