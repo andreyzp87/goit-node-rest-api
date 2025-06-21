@@ -5,56 +5,57 @@ import Contact from '../db/models/Contact.js';
 
 const contactsPath = path.join('./db/contacts.json');
 
-async function listContacts() {
-  const allContacts = await Contact.findAll();
+async function listContacts(userId) {
+  const allContacts = await Contact.findAll({ where: { owner: userId } });
 
   if (!allContacts || allContacts.length === 0) {
-    await fillContacts();
-    return await Contact.findAll();
+    await fillContacts(userId);
+    return await Contact.findAll({ where: { owner: userId } });
   }
 
   return allContacts;
 }
 
-async function fillContacts() {
+async function fillContacts(userId) {
   const data = await fs.readFile(contactsPath);
   JSON.parse(data).forEach(async c => {
-    await Contact.create(c);
+    await Contact.create({ ...c, owner: userId });
   });
 }
 
-async function getContactById(contactId) {
-  return Contact.findByPk(contactId);
+async function getContactById(contactId, userId) {
+  return Contact.findOne({ where: { id: contactId, owner: userId } });
 }
 
-async function removeContact(contactId) {
-  const contact = await getContactById(contactId);
+async function removeContact(contactId, userId) {
+  const contact = await getContactById(contactId, userId);
   if (!contact) {
     return null;
   }
-  await Contact.destroy({ where: { id: contactId } });
+  await Contact.destroy({ where: { id: contactId, owner: userId } });
   return contact;
 }
 
-async function addContact(name, email, phone) {
+async function addContact(name, email, phone, userId) {
   return await Contact.create({
     id: nanoid(),
     name,
     email,
     phone,
+    owner: userId,
   });
 }
 
-async function updateContact(contactId, data) {
-  const contact = await getContactById(contactId);
+async function updateContact(contactId, data, userId) {
+  const contact = await getContactById(contactId, userId);
   if (!contact) {
     return null;
   }
   return await contact.update(data, { returning: true });
 }
 
-async function updateStatusContact(contactId, data) {
-  const contact = await getContactById(contactId);
+async function updateStatusContact(contactId, data, userId) {
+  const contact = await getContactById(contactId, userId);
   if (!contact) {
     return null;
   }
