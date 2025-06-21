@@ -1,10 +1,20 @@
-import * as authService from '../services/authServices.js';
+import bcrypt from 'bcryptjs';
+import authService from '../services/authServices.js';
 import HttpError from '../helpers/HttpError.js';
 
 export const register = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const user = await authService.register(email, password);
+
+    const existingUser = await authService.getUserByEmail(email);
+
+    if (existingUser) {
+      throw HttpError(409, 'Email in use');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await authService.createUser(email, hashedPassword);
 
     res.status(201).json({
       user: {
@@ -13,10 +23,6 @@ export const register = async (req, res, next) => {
       },
     });
   } catch (error) {
-    if (error.message === 'Email in use') {
-      next(HttpError(409, 'Email in use'));
-      return;
-    }
     next(error);
   }
 };
@@ -24,29 +30,41 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const result = await authService.login(email, password);
+
+    const user = await authService.getUserByEmail(email);
+
+    if (!user) {
+      throw HttpError(401, 'Email or password is wrong');
+    }
+
+    const passwordCompare = await bcrypt.compare(password, user.password);
+
+    if (!passwordCompare) {
+      throw HttpError(401, 'Email or password is wrong');
+    }
+
+    const token = authService.generateToken(user.id);
+    const result = await authService.updateUserToken(user.id, token);
+
+    if (!result) {
+      throw HttpError(401, 'Email or password is wrong');
+    }
 
     res.json({
-      token: result.token,
+      token,
       user: {
-        email: result.user.email,
-        subscription: result.user.subscription,
+        email: user.email,
+        subscription: user.subscription,
       },
     });
   } catch (error) {
-    if (error.message === 'Email or password is wrong') {
-      next(HttpError(401, 'Email or password is wrong'));
-      return;
-    }
     next(error);
   }
 };
 
 export const logout = async (req, res, next) => {
   try {
-    const { id } = req.user;
-    await authService.logout(id);
-
+    await authService.updateUserToken(req.user.id, null);
     res.status(204).end();
   } catch (error) {
     next(error);
@@ -55,10 +73,9 @@ export const logout = async (req, res, next) => {
 
 export const getCurrent = async (req, res, next) => {
   try {
-    const { email, subscription } = req.user;
     res.json({
-      email,
-      subscription,
+      email: req.user.email,
+      subscription: req.user.subscription,
     });
   } catch (error) {
     next(error);

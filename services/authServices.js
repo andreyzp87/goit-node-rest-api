@@ -1,54 +1,38 @@
-import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import User from '../db/models/User.js';
 
-export const register = async (email, password) => {
-  // Check if user already exists
-  const existingUser = await User.findOne({ where: { email } });
+async function createUser(email, password) {
+  const user = await User.create({ email, password });
+  return user;
+}
 
-  if (existingUser) {
-    throw new Error('Email in use');
-  }
+async function getUserById(userId) {
+  return await User.findByPk(userId);
+}
 
-  // Hash password
-  const hashedPassword = await bcrypt.hash(password, 10);
+async function getUserByEmail(email) {
+  return await User.findOne({ where: { email } });
+}
 
-  // Create new user
-  const newUser = await User.create({
-    email,
-    password: hashedPassword,
+function generateToken(userId) {
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    expiresIn: '1h',
   });
+}
 
-  return newUser;
-};
+function verifyToken(token) {
+  return jwt.verify(token, process.env.JWT_SECRET);
+}
 
-export const login = async (email, password) => {
-  // Find user by email
-  const user = await User.findOne({ where: { email } });
+async function updateUserToken(userId, token) {
+  return await User.update({ token }, { where: { id: userId } });
+}
 
-  if (!user) {
-    throw new Error('Email or password is wrong');
-  }
-
-  // Compare passwords
-  const passwordCompare = await bcrypt.compare(password, user.password);
-  if (!passwordCompare) {
-    throw new Error('Email or password is wrong');
-  }
-
-  // Generate token (using nanoid for simplicity, consider JWT in real-world applications)
-  const token =
-    Math.random().toString(36).substring(2) + Date.now().toString(36);
-
-  // Save token to user
-  await user.update({ token });
-
-  return {
-    token,
-    user,
-  };
-};
-
-export const logout = async userId => {
-  await User.update({ token: null }, { where: { id: userId } });
-  return true;
+export default {
+  createUser,
+  getUserById,
+  getUserByEmail,
+  generateToken,
+  verifyToken,
+  updateUserToken,
 };

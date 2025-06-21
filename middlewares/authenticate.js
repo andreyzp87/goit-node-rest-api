@@ -1,5 +1,5 @@
 import HttpError from '../helpers/HttpError.js';
-import User from '../db/models/User.js';
+import authServices from '../services/authServices.js';
 
 const authenticate = async (req, res, next) => {
   const { authorization = '' } = req.headers;
@@ -10,14 +10,13 @@ const authenticate = async (req, res, next) => {
   }
 
   try {
-    // Find user by token
-    const user = await User.findOne({ where: { token } });
+    const { id } = authServices.verifyToken(token);
+    const user = await authServices.getUserById(id);
 
-    if (!user) {
+    if (!user || !user.token || user.token !== token) {
       return next(HttpError(401, 'Not authorized'));
     }
 
-    // Add user to request object
     req.user = user;
     next();
   } catch (error) {

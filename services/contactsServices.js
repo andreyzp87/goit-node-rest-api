@@ -24,7 +24,7 @@ async function fillContacts(userId) {
 }
 
 async function getContactById(contactId, userId) {
-  return Contact.findOne({ where: { id: contactId, owner: userId } });
+  return await Contact.findOne({ where: { id: contactId, owner: userId } });
 }
 
 async function removeContact(contactId, userId) {
