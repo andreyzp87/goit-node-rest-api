@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 import User from '../db/models/User.js';
 
-async function createUser(email, password) {
-  const user = await User.create({ email, password });
+async function createUser(email, password, avatarURL) {
+  const user = await User.create({ email, password, avatarURL });
   return user;
 }
 
@@ -28,6 +28,10 @@ async function updateUserToken(userId, token) {
   return await User.update({ token }, { where: { id: userId } });
 }
 
+async function updateUserAvatar(userId, avatarURL) {
+  return await User.update({ avatarURL }, { where: { id: userId } });
+}
+
 export default {
   createUser,
   getUserById,
@@ -35,4 +39,5 @@ export default {
   generateToken,
   verifyToken,
   updateUserToken,
+  updateUserAvatar,
 };
