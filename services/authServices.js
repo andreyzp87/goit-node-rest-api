@@ -1,8 +1,13 @@
 import jwt from 'jsonwebtoken';
 import User from '../db/models/User.js';
 
-async function createUser(email, password, avatarURL) {
-  const user = await User.create({ email, password, avatarURL });
+async function createUser(email, password, avatarURL, verificationToken) {
+  const user = await User.create({
+    email,
+    password,
+    avatarURL,
+    verificationToken,
+  });
   return user;
 }
 
@@ -12,6 +17,10 @@ async function getUserById(userId) {
 
 async function getUserByEmail(email) {
   return await User.findOne({ where: { email } });
+}
+
+async function getUserByVerificationToken(verificationToken) {
+  return await User.findOne({ where: { verificationToken } });
 }
 
 function generateToken(userId) {
@@ -28,6 +37,13 @@ async function updateUserToken(userId, token) {
   return await User.update({ token }, { where: { id: userId } });
 }
 
+async function updateUserVerification(userId, isVerified, verificationToken) {
+  return await User.update(
+    { verify: isVerified, verificationToken },
+    { where: { id: userId } }
+  );
+}
+
 async function updateUserAvatar(userId, avatarURL) {
   return await User.update({ avatarURL }, { where: { id: userId } });
 }
@@ -40,4 +56,6 @@ export default {
   verifyToken,
   updateUserToken,
   updateUserAvatar,
+  getUserByVerificationToken,
+  updateUserVerification,
 };

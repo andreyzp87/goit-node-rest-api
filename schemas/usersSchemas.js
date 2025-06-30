@@ -9,3 +9,7 @@ export const loginSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().required(),
 });
+
+export const verifyEmailSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
