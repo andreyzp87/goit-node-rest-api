@@ -1,4 +1,7 @@
 import bcrypt from 'bcryptjs';
+import gravatar from 'gravatar';
+import path from 'path';
+import fs from 'fs';
 import authService from '../services/authServices.js';
 import HttpError from '../helpers/HttpError.js';
 
@@ -13,13 +16,19 @@ export const register = async (req, res, next) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const avatarURL = gravatar.url(email, {
+      s: '250',
+      r: 'pg',
+      d: 'identicon',
+    });
 
-    const user = await authService.createUser(email, hashedPassword);
+    const user = await authService.createUser(email, hashedPassword, avatarURL);
 
     res.status(201).json({
       user: {
         email: user.email,
         subscription: user.subscription,
+        avatarURL: user.avatarURL,
       },
     });
   } catch (error) {
@@ -55,6 +64,7 @@ export const login = async (req, res, next) => {
       user: {
         email: user.email,
         subscription: user.subscription,
+        avatarURL: user.avatarURL,
       },
     });
   } catch (error) {
@@ -76,7 +86,41 @@ export const getCurrent = async (req, res, next) => {
     res.json({
       email: req.user.email,
       subscription: req.user.subscription,
+      avatarURL: req.user.avatarURL,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw HttpError(400, 'Avatar file is required');
+    }
+
+    const { id } = req.user;
+    const { path: tempPath, filename } = req.file;
+
+    const avatarsDir = path.join(process.cwd(), 'public', 'avatars');
+
+    if (!fs.existsSync(avatarsDir)) {
+      fs.mkdirSync(avatarsDir, { recursive: true });
+    }
+
+    const avatarPath = path.join(avatarsDir, filename);
+
+    try {
+      fs.renameSync(tempPath, avatarPath);
+    } catch (error) {
+      fs.unlinkSync(tempPath);
+      throw HttpError(500, 'Failed to save avatar');
+    }
+
+    const avatarURL = `/avatars/${filename}`;
+    await authService.updateUserAvatar(id, avatarURL);
+
+    res.json({ avatarURL });
   } catch (error) {
     next(error);
   }
